@@ -152,9 +152,12 @@ func VerifyToken(tokenString string) (*jwt.Token, error) {
 		}
 		return publicKey, nil
 	})
-	if err != nil || !parsedToken.Valid {
+	if err != nil {
 		err = errors.Wrap(err, "Token is invalid")
 		return nil, err
+	}
+	if !parsedToken.Valid {
+		return nil, errors.New("Token is invalid")
 	}
 
 	return parsedToken, nil

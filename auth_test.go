@@ -130,6 +130,7 @@ func TestVerifyToken(t *testing.T) {
 
 			Convey("Then it returns error", func() {
 				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldEqual, "Token is invalid: Unexpected signing method")
 			})
 		})
 
@@ -148,6 +149,7 @@ func TestVerifyToken(t *testing.T) {
 
 			Convey("Then it returns error", func() {
 				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldEqual, "Token is invalid: token contains an invalid number of segments")
 			})
 		})
 
@@ -158,6 +160,7 @@ func TestVerifyToken(t *testing.T) {
 
 			Convey("Then it returns error", func() {
 				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldEqual, "Token is invalid: Token is expired")
 			})
 		})
 
