@@ -143,13 +143,13 @@ func TestVerifyToken(t *testing.T) {
 			}
 			token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 			// sign by publicKey key
-			tokenString, _ = token.SignedString(publicKey)
+			tokenString, _ = token.SignedString(rawPublicKey)
 
 			_, err := VerifyToken(tokenString)
 
 			Convey("Then it returns error", func() {
 				So(err, ShouldNotBeNil)
-				So(err.Error(), ShouldEqual, "Token is invalid: token contains an invalid number of segments")
+				So(err.Error(), ShouldEqual, "Token is invalid: Unexpected signing method")
 			})
 		})
 
