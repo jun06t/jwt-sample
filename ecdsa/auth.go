@@ -20,68 +20,84 @@ var (
 )
 
 func init() {
-	skey, err := ioutil.ReadFile("./secret.key")
-	if err != nil {
-		panic(err)
-	}
-	caCert, err := ioutil.ReadFile("./ca.crt")
-	if err != nil {
-		panic(err)
-	}
-	pCert, err := ioutil.ReadFile("./public.crt")
+	roots, err := initRootCerts()
 	if err != nil {
 		panic(err)
 	}
 
-	err = parseKeys(skey, caCert, pCert)
+	secretKey, err = initPrivateKey()
+	if err != nil {
+		panic(err)
+	}
+
+	publicKey, err = initPublicKey(roots)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func parseKeys(sKey, caCert, pCert []byte) error {
-	var err error
-	privateKeyBlock, _ := pem.Decode(sKey)
+func initRootCerts() (*x509.CertPool, error) {
+	roots := x509.NewCertPool()
+	caCert, err := ioutil.ReadFile("./ca.crt")
+	if err != nil {
+		return nil, err
+	}
+	if ok := roots.AppendCertsFromPEM(caCert); !ok {
+		return nil, errors.New("invalid certficate")
+	}
+	return roots, nil
+}
+
+func initPrivateKey() (interface{}, error) {
+	raw, err := ioutil.ReadFile("./secret.key")
+	if err != nil {
+		return nil, err
+	}
+	privateKeyBlock, _ := pem.Decode(raw)
 	if privateKeyBlock == nil {
-		return errors.New("private key cannot decode")
+		return nil, errors.New("private key cannot decode")
 	}
 	if privateKeyBlock.Type != "EC PRIVATE KEY" {
-		return errors.New("private key type is not rsa")
+		return nil, errors.New("private key type is not rsa")
 	}
-	secretKey, err = x509.ParseECPrivateKey(privateKeyBlock.Bytes)
+	key, err := x509.ParseECPrivateKey(privateKeyBlock.Bytes)
 	if err != nil {
-		return errors.New("failed to parse private key")
+		return nil, errors.New("failed to parse private key")
 	}
 
-	roots := x509.NewCertPool()
-	if ok := roots.AppendCertsFromPEM(caCert); !ok {
-		return errors.New("invalid root cert")
+	return key, nil
+}
+
+func initPublicKey(roots *x509.CertPool) (interface{}, error) {
+	pCert, err := ioutil.ReadFile("./public.crt")
+	if err != nil {
+		return nil, err
 	}
+
 	publicKeyBlock, _ := pem.Decode(pCert)
 	if publicKeyBlock == nil {
-		return errors.New("public key cannot decode")
+		return nil, errors.New("public key cannot decode")
 	}
 	if publicKeyBlock.Type != "CERTIFICATE" {
-		return errors.New("public key type is invalid")
+		return nil, errors.New("public key type is invalid")
 	}
 
 	cert, err := x509.ParseCertificate(publicKeyBlock.Bytes)
 	if err != nil {
-		return errors.New("failed to parse public key")
+		return nil, errors.New("failed to parse public key")
 	}
 	opt := x509.VerifyOptions{
 		Roots: roots,
 	}
 	_, err = cert.Verify(opt)
 	if err != nil {
-		return errors.New("failed to verify certficate")
+		return nil, errors.New("failed to verify certficate")
 	}
 	if cert.Subject.CommonName != "fugafuga.co.jp" {
-		return errors.New("invalid subject")
+		return nil, errors.New("invalid subject")
 	}
-	publicKey = cert.PublicKey
 
-	return nil
+	return cert.PublicKey, nil
 }
 
 func GenerateToken(userID string, now int64) (tokenString string, err error) {
